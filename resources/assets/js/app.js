@@ -26,7 +26,7 @@ import AuthorMeta from '../../views/backend/title_and_meta/Author.vue';
 Vue.use(VueRouter);
 
 const routes = [
-    { path: '/cms/:adminPrefix/:lang/plugins/accio/seo', component: Base, children: [
+    { path: globalProjectDirectory+'/:adminPrefix/:lang/plugins/accio/seo', component: Base, children: [
         { path: '', component: TitleAndMeta, children: [
                 { path: '', component: PostTypesMeta, name: 'post-types-meta' },
                 { path: 'category-meta', component: CategoryMeta, name: 'category-meta' },
