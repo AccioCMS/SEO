@@ -1,0 +1,39 @@
+{
+  "title": "Accio SEO",
+  "namespace": "Accio/SEO",
+  "organization": "Accio",
+  "baseURL": "accio/seo",
+  "description ": "SEO plugin",
+  "version": "1.0.0",
+  "icon": "pencil",
+
+  "author" : [
+    {
+      "name" : "Accio LLC",
+      "email": "jetmir.haxhisefa@accio.com"
+    }
+  ],
+
+  "dependencies" : [
+    "xAuthor\\xPlugin"
+  ],
+
+  "panels": {
+    "post": {
+      "name": "post",
+      "path": "Base.vue",
+      "placement": "all"
+    }
+  },
+
+  "mix": {
+    "app": "./plugins/Accio/SEO/resources/assets/js/app.js",
+    "public": "./plugins/Accio/SEO/public/js"
+  },
+
+  "permissions":{
+    "defaultPermissions": [
+      "create", "read", "update", "delete"
+    ]
+  }
+}
