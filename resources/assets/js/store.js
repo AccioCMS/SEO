@@ -1,6 +1,6 @@
 import Vuex from 'vuex'
 import Vue from 'vue'
-import Bootstrap from '../../../../../../resources/assets/js/bootstrap-vuex';
+import Bootstrap from '../../../../../../vendor/acciocms/core/src/resources/assets/js/bootstrap-vuex';
 
 Vue.use(Vuex);
 

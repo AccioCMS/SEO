@@ -5,12 +5,8 @@ namespace Plugins\Accio\SEO\Controllers;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use App\Http\Controllers\MainPluginsController;
-use Facebook\Exceptions\FacebookResponseException;
-use Facebook\Exceptions\FacebookSDKException;
-use Facebook\Facebook;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Plugins\Accio\InstantArticles\Models\InstantArticles;
 use Plugins\Accio\SEO\Models\SEOPost;
 use Plugins\Accio\SEO\Models\SEOSettings;
 

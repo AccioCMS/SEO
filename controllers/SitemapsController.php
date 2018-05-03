@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use Accio\App\Traits\PluginTrait;
-use Plugins\Accio\SEO\Models\SEOPost;
+use Plugins\Accio\SEO\Models\PositionManager;
 use Plugins\Accio\SEO\Models\SEOSettings;
 use Datetime;
 
@@ -163,7 +163,7 @@ class SitemapsController extends Controller
      * @return array
      */
     private function getMetaData($postTypeSlug, $postID){
-        $this->postMetaData = SEOPost::where('belongsTo', $postTypeSlug)
+        $this->postMetaData = PositionManager::where('belongsTo', $postTypeSlug)
             ->whereIn('belongsToID', $postID)
             ->get()
             ->keyBy('belongsToID')
