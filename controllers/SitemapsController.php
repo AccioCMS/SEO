@@ -43,7 +43,7 @@ class SitemapsController extends Controller
      *
      * @var bool $isActive
      */
-    private $isActive;
+    private $isActive = false;
 
     /**
      * List all sitemaps
@@ -62,7 +62,7 @@ class SitemapsController extends Controller
      * Max number of entries allowed per sitemap
      * @var
      */
-    private $maxEntries;
+    private $maxEntries = 0;
 
     /**
      * Post SEO meta data
@@ -76,10 +76,12 @@ class SitemapsController extends Controller
     public function __construct()
     {
         $this->settings = SEOSettings::getAllSettings();
-        $this->isActive = $this->settings['sitemap']['isActive'];
-        $this->maxEntries = $this->settings['sitemap']['maxEntriesAllowed'];
-        if(env('DB_ARCHIVE')) {
-            $this->connection = "mysql_archive";
+        if($this->settings) {
+            $this->isActive = $this->settings['sitemap']['isActive'];
+            $this->maxEntries = $this->settings['sitemap']['maxEntriesAllowed'];
+            if (env('DB_ARCHIVE')) {
+                $this->connection = "mysql_archive";
+            }
         }
     }
 
@@ -334,7 +336,7 @@ class SitemapsController extends Controller
         $users = User::whereHas('posts', function ($query){
             $query->published();
         })
-            ->with('profileImage')
+            ->with('profileimage')
             ->get();
 
         $this->getMetaData('author', $users->pluck('userID')->toArray());

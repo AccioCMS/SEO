@@ -2,8 +2,12 @@
 
 namespace Plugins\Accio\SEO;
 
+use Accio\App\Traits\CacheTrait;
 use App\Models\Media;
+use App\Models\Post;
 use App\Models\Task;
+use Facebook\GraphNodes\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Redirect;
@@ -17,7 +21,7 @@ use Plugins\Accio\SEO\Models\SEOSettings;
 use Symfony\Component\Console\Command\Command;
 
 class Plugin implements PluginInterface {
-    use PluginTrait;
+    use PluginTrait, CacheTrait;
 
     /**
      * Saves post data
@@ -217,8 +221,10 @@ class Plugin implements PluginInterface {
     }
 
     /**
-     * @param array $data from request
-     * @param object $model saved data ( post object )
+     * Store post data
+     *
+     * @param $data
+     * @param $post
      */
     public function store($data, $post){
         $seoData = $data['pluginsData']['Accio_SEO_post'];
@@ -248,6 +254,9 @@ class Plugin implements PluginInterface {
             if (!$seoPost->save()){
                 $post->noty("error", "SEO data not saved");
             }else{
+                // remove caches
+                Cache::forget('seo_meta_data_'.$post->getTable());
+
                 // create store task
                 Task::create('Accio_SEO_post','store', $post, ['postType' => $data['postType'], 'data' => $data]);
             }
@@ -355,29 +364,93 @@ class Plugin implements PluginInterface {
     public function boot(){
     }
 
+
+    /**
+     * Save post data in cache
+     *
+     * @param string $belongsTo
+     * @return $this
+     * @throws \Exception
+     */
+    private function savePostDataInCache(string $belongsTo){
+        $cacheName = 'seo_meta_data_'.$belongsTo;
+
+        if(!Cache::has($cacheName) &&  isPostType($belongsTo)){
+            $posts = Post::getFromCache($belongsTo)->pluck(['postID'])->toArray();
+
+            if(count($posts)){
+                $modelMetaDataObj = new SEOPost();
+                $modelMetaData = $modelMetaDataObj
+                  ->where('belongsTo', $belongsTo)
+                  ->whereIn('belongsToID', array_values($posts))
+                  ->get()
+                  ->toArray();
+
+                // save in cache
+                Cache::forever($cacheName, $modelMetaData);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Get SEO Post data
+     *
+     * @param string $belongsTo
+     * @param int $belongsToID
+     * @return mixed
+     * @throws \Exception
+     */
+    public function getPostData(string $belongsTo, int $belongsToID){
+        // search in cache
+
+        if(!Cache::has('seo_meta_data_'.$belongsTo)){
+            $cacheData = $this->savePostDataInCache($belongsTo);
+        }else{
+            $cacheData = Cache::get('seo_meta_data_'.$belongsTo);
+        }
+
+        // search in cache
+        if($cacheData){
+            $modelMetaData = collect($cacheData)->where('belongsToID',$belongsToID)->first();
+            if($modelMetaData){
+                return $this->fillCacheAttributes(SEOPost::class, [$modelMetaData])->first();
+
+            }
+        }
+        
+        // search in database
+        $modelMetaDataObj = new SEOPost();
+        $modelMetaData = $modelMetaDataObj
+          ->where('belongsTo', $belongsTo)
+          ->where('belongsToID', $belongsToID)
+          ->first();
+
+        return $modelMetaData;
+    }
+
+
     /**
      * Query and set post meta data
      *
      * @param $belongsTo
      * @param $belongsToID
-     *
      * @return $this
+     * @throws \Exception
      */
-    public function setPostMetaData($belongsTo, $belongsToID){
-        $modelMetaDataObj = new SEOPost();
-        $this->postMetaData = $modelMetaDataObj->where('belongsTo', $belongsTo)
-            ->where('belongsToID', $belongsToID)->first();
+    public function setPostMetaData(string $belongsTo, int $belongsToID) {
+        $this->modelMetaData = $this->getPostData($belongsTo,$belongsToID);
 
-        if($this->postMetaData){
-            $this->postMetaData->facebookMedia = null;
-            $this->postMetaData->twitterMedia = null;
+        if($this->modelMetaData){
+            $this->modelMetaData->facebookMedia = null;
+            $this->modelMetaData->twitterMedia = null;
 
-            if($this->postMetaData->facebookMediaID){
-                $this->postMetaData->facebookMedia = Media::find($this->postMetaData->facebookMediaID);
+            if($this->modelMetaData->facebookMediaID){
+                $this->modelMetaData->facebookMedia = Media::find($this->modelMetaData->facebookMediaID);
             }
 
-            if($this->postMetaData->twitterMediaID){
-                $this->postMetaData->twitterMedia = Media::find($this->postMetaData->twitterMediaID);
+            if($this->modelMetaData->twitterMediaID){
+                $this->modelMetaData->twitterMedia = Media::find($this->modelMetaData->twitterMediaID);
             }
         }
 
@@ -390,8 +463,8 @@ class Plugin implements PluginInterface {
      * @return string|null
      */
     public function getPostMetaData($key){
-        if($this->postMetaData && $this->postMetaData->$key){
-            return $this->postMetaData->$key;
+        if($this->modelMetaData && $this->modelMetaData->$key){
+            return $this->modelMetaData->$key;
         }
         return;
     }
