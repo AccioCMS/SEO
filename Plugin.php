@@ -411,14 +411,21 @@ class Plugin implements PluginInterface {
         }
 
         // search in cache
-        if($cacheData){
-            $modelMetaData = collect($cacheData)->where('belongsToID',$belongsToID)->first();
-            if($modelMetaData){
-                return $this->fillCacheAttributes(SEOPost::class, [$modelMetaData])->first();
-
+        $modelMetaData = collect($cacheData)->where('belongsToID',$belongsToID)->first();
+        if($modelMetaData){
+            return $this->fillCacheAttributes(SEOPost::class, [$modelMetaData])->first();
+        }else{
+            // post meta data of latest posts should have been in cache
+            // because we save them above, therefore, we don't even need
+            // to make a query for that
+            if(isPostType($belongsTo)){
+                $posts = Post::getFromCache($belongsTo)->pluck(['postID'])->toArray();
+                if(in_array($belongsToID, $posts)){
+                    return null;
+                }
             }
         }
-        
+
         // search in database
         $modelMetaDataObj = new SEOPost();
         $modelMetaData = $modelMetaDataObj
