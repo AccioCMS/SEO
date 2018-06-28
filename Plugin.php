@@ -3,8 +3,10 @@
 namespace Plugins\Accio\SEO;
 
 use Accio\App\Traits\CacheTrait;
+use App\Models\Category;
 use App\Models\Media;
 use App\Models\Post;
+use App\Models\Tag;
 use App\Models\Task;
 use Facebook\GraphNodes\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -36,7 +38,7 @@ class Plugin implements PluginInterface {
     private $settings;
 
     /**
-     * The model where we will get meta data from 
+     * The model where we will get meta data from
      * @var object $model
      */
     private $model;
@@ -77,10 +79,27 @@ class Plugin implements PluginInterface {
     }
 
     /**
+     * It makes an url ready to be checked for regex.
+     *
+     * @param string $url
+     * @return null|string|string[]
+     */
+    private function makeRegexURL(string $url){
+        $url = '/'.str_replace(['/'],['\/'],$url).'/';
+        $finalURL = preg_replace('/([a-zA-Z0-9])\./','$1\.$2',$url);
+
+        if($finalURL){
+            return $finalURL;
+        }
+
+        return null;
+    }
+    /**
      * Redirect urls as defined in Plugin page
      * @return $this
      */
     private function redirectManager(){
+
         Event::listen('system:boot', function (){
             $redirectContent = $this->getSettings('redirectManager', 'content');
             $rows = explode("\n", $redirectContent);
@@ -88,9 +107,42 @@ class Plugin implements PluginInterface {
             foreach($rows as $link){
                 $explodeLink = explode(' ', $link);
                 if(count($explodeLink) == 2){
-                    if($currentURL == $explodeLink[0]){
-                        Header("Location: ".$explodeLink[1], true, 301);
+                    $fromUrl = $explodeLink[0];
+                    $toUrl = $explodeLink[1];
+
+
+                    if($currentURL == $fromUrl){
+                        Header("Location: ".$toUrl, true, 301);
                         exit;
+                    }else{ //try regex
+
+                        if($fromUrl = $this->makeRegexURL($fromUrl)) {
+                            if (preg_match($fromUrl, $currentURL)) {
+
+                                preg_match_all($fromUrl, $currentURL, $patternMatches);
+                                preg_match_all('/\$[0-9]/', $toUrl, $replacementMatches);
+
+                                if(count($patternMatches) && count($replacementMatches)) {
+                                    $paramsMatched = true;
+                                    foreach ($replacementMatches[0] as $match) {
+                                        $removeSign = str_replace('$', '', $match);
+                                        // match & replace patterns
+                                        if (isset($patternMatches[$removeSign]) && isset($patternMatches[$removeSign][0])) {
+                                            $toUrl = str_replace($match, $patternMatches[$removeSign][0], $toUrl);
+                                        }else{
+                                            $paramsMatched = false;
+                                            break;
+                                        }
+                                    }
+                                    if($paramsMatched){
+                                        Header("Location: ".$toUrl, true, 301);
+                                        exit;
+                                    }
+                                }
+                            }
+                        }
+
+
                     }
                 }
             }
@@ -100,7 +152,7 @@ class Plugin implements PluginInterface {
 
     /**
      * Set plugin meta tags
-     * 
+     *
      * @return $this
      */
     private function setMetaTags(){
@@ -109,11 +161,11 @@ class Plugin implements PluginInterface {
             if($model){
                 $this->model = $model;
                 $this
-                    ->setPostMetaData($this->model->getTable(), $this->model->getKey())
-                    ->setTitle()
-                    ->setDescription()
-                    ->setOpenGraph()
-                    ->setTwiterMeta();
+                  ->setPostMetaData($this->model->getTable(), $this->model->getKey())
+                  ->setTitle()
+                  ->setDescription()
+                  ->setOpenGraph()
+                  ->setTwiterMeta();
             }
         });
 
@@ -186,7 +238,7 @@ class Plugin implements PluginInterface {
 
     /**
      * Set open graph meta data
-     * 
+     *
      * @return $this
      */
     private function setOpenGraph(){
@@ -274,7 +326,7 @@ class Plugin implements PluginInterface {
      */
     private function manageTasks($post){
         $seoDataTable = (new SEOPost())->getTable();
-        
+
         $hasData = DB::connection('mysql_archive')->table($seoDataTable)->count();
         // IF no data in archive
         if(!$hasData){
@@ -296,12 +348,12 @@ class Plugin implements PluginInterface {
                         $postType = $task->additional['data']['postType'];
 
                         $pluginData = $task->additional['data']['pluginsData']['Accio_SEO_post'];
-                        
+
                         // if seo data already exists
                         $doesPostExist = DB::connection('mysql_archive')->table($seoDataTable)->where('belongsToID',$post->postID)->where('belongsTo',$postType)->count();
 
                         $seoDataOBJ = DB::connection('mysql_archive')->table($seoDataTable);
-                        
+
                         // post seo data is being updated
                         if($doesPostExist){
                             $seoDataOBJ->where('belongsToID',$post->postID)->where('belongsTo',$postType)->update($this->encode($this->prepare($pluginData)));
@@ -375,19 +427,36 @@ class Plugin implements PluginInterface {
     private function savePostDataInCache(string $belongsTo){
         $cacheName = 'seo_meta_data_'.$belongsTo;
 
-        if(!Cache::has($cacheName) &&  isPostType($belongsTo)){
-            $posts = Post::getFromCache($belongsTo)->pluck(['postID'])->toArray();
+        if(!Cache::has($cacheName)){
+            $items = [];
+            switch ($belongsTo){
+                case 'categories':
+                    $items = Category::getFromCache($belongsTo)->pluck(['categoryID'])->toArray();
+                    break;
 
-            if(count($posts)){
+                case 'tags':
+                    $items = Tag::getFromCache($belongsTo)->pluck(['tagID'])->toArray();
+                    break;
+
+                default:
+                    $getPostType = getPostType($belongsTo);
+                    if($getPostType){
+                        $items = Post::getFromCache($belongsTo)->pluck(['postID'])->toArray();
+                    }
+                    break;
+            }
+
+
+            if($items) {
                 $modelMetaDataObj = new SEOPost();
-                $modelMetaData = $modelMetaDataObj
+                $seoData = $modelMetaDataObj
                   ->where('belongsTo', $belongsTo)
-                  ->whereIn('belongsToID', array_values($posts))
+                  ->whereIn('belongsToID', array_values($items))
                   ->get()
                   ->toArray();
 
                 // save in cache
-                Cache::forever($cacheName, $modelMetaData);
+                Cache::forever($cacheName, $seoData);
             }
         }
         return $this;
@@ -499,7 +568,7 @@ class Plugin implements PluginInterface {
                 $table->increments("settingsID");
                 $table->string("belongsTo", 30);
                 $table->string("key", 45);
-                $table->string("value", 45)->nullable();
+                $table->text("value")->nullable();
             });}
 
         if(!Schema::hasTable('accio_seo_posts_data')) {
