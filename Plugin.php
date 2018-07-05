@@ -64,11 +64,6 @@ class Plugin implements PluginInterface {
             Task::create('Accio_SEO_post', 'store', $post, ['data' => $data]);
         });
 
-        // When post is archived
-        Event::listen('post:archived', function ($post) {
-            $this->manageTasks($post);
-        });
-
         // When posts are deleted, delete seo data too
         Event::listen('post:deleted', function ($post) {
             SEOPost::where("belongsToID", $post->postID)->where("belongsTo", $post->getTable())->delete();
@@ -104,12 +99,12 @@ class Plugin implements PluginInterface {
             $redirectContent = $this->getSettings('redirectManager', 'content');
             $rows = explode("\n", $redirectContent);
             $currentURL = request()->GetRequestUri();
+
             foreach($rows as $link){
                 $explodeLink = explode(' ', $link);
                 if(count($explodeLink) == 2){
                     $fromUrl = $explodeLink[0];
                     $toUrl = $explodeLink[1];
-
 
                     if($currentURL == $fromUrl){
                         Header("Location: ".$toUrl, true, 301);
@@ -319,60 +314,6 @@ class Plugin implements PluginInterface {
 
 
     /**
-     * Used to transfer all seo data into archive database, if the archive is empty.
-     * Creates and Updates new records of seo Data
-     *
-     * @param object $post
-     */
-    private function manageTasks($post){
-        $seoDataTable = (new SEOPost())->getTable();
-
-        $hasData = DB::connection('mysql_archive')->table($seoDataTable)->count();
-        // IF no data in archive
-        if(!$hasData){
-            // transfer all data from main DB to the archive
-            $allData = DB::connection('mysql')->table($seoDataTable)->get();
-            $tmp = [];
-            foreach ($allData as $key => $seoData){
-                $tmp[$key] = (array) $seoData;
-            }
-
-            DB::connection('mysql_archive')->table($seoDataTable)->insert($tmp);
-        }else{
-            // loop throw all tasks
-            foreach(Task::get() as $task){
-                if($task->belongsTo == 'Accio_SEO_post'){
-
-                    // task of this plugin
-                    if($task->type == 'store'){
-                        $postType = $task->additional['data']['postType'];
-
-                        $pluginData = $task->additional['data']['pluginsData']['Accio_SEO_post'];
-
-                        // if seo data already exists
-                        $doesPostExist = DB::connection('mysql_archive')->table($seoDataTable)->where('belongsToID',$post->postID)->where('belongsTo',$postType)->count();
-
-                        $seoDataOBJ = DB::connection('mysql_archive')->table($seoDataTable);
-
-                        // post seo data is being updated
-                        if($doesPostExist){
-                            $seoDataOBJ->where('belongsToID',$post->postID)->where('belongsTo',$postType)->update($this->encode($this->prepare($pluginData)));
-                        }else{
-                            $seoData = $this->encode($this->prepare($pluginData));
-                            $seoData['belongsToID'] = $post->postID;
-                            $seoData['belongsTo'] = $postType;
-                            $seoDataOBJ->insert($seoData);
-                        }
-                    }elseif($task->type == 'delete'){
-                        $postType = $task->additional['postType'];
-                        DB::connection('mysql_archive')->table($seoDataTable)->where('belongsTo',$postType)->where('belongsToID',$post->postID)->delete();
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * Object to array
      * @param array $seoData input array of objects
      * @return array multidimensional array
@@ -426,40 +367,38 @@ class Plugin implements PluginInterface {
      */
     private function savePostDataInCache(string $belongsTo){
         $cacheName = 'seo_meta_data_'.$belongsTo;
+        $seoData = [];
 
-        if(!Cache::has($cacheName)){
-            $items = [];
-            switch ($belongsTo){
-                case 'categories':
-                    $items = Category::getFromCache($belongsTo)->pluck(['categoryID'])->toArray();
-                    break;
+        $items = [];
+        switch ($belongsTo){
+            case 'category':
+                $items = Category::cache($belongsTo)->getItems()->limit(2000)->pluck(['categoryID'])->toArray();
+                break;
 
-                case 'tags':
-                    $items = Tag::getFromCache($belongsTo)->pluck(['tagID'])->toArray();
-                    break;
+            case 'tag':
+                $items = Tag::cache($belongsTo)->getItems()->limit(2000)->pluck(['tagID'])->toArray();
+                break;
 
-                default:
-                    $getPostType = getPostType($belongsTo);
-                    if($getPostType){
-                        $items = Post::getFromCache($belongsTo)->pluck(['postID'])->toArray();
-                    }
-                    break;
-            }
-
-
-            if($items) {
-                $modelMetaDataObj = new SEOPost();
-                $seoData = $modelMetaDataObj
-                  ->where('belongsTo', $belongsTo)
-                  ->whereIn('belongsToID', array_values($items))
-                  ->get()
-                  ->toArray();
-
-                // save in cache
-                Cache::forever($cacheName, $seoData);
-            }
+            default:
+                $getPostType = getPostType($belongsTo);
+                if($getPostType){
+                    $items = Post::cache($belongsTo)->getItems()->pluck(['postID'])->toArray();
+                }
+                break;
         }
-        return $this;
+
+        if($items) {
+            $modelMetaDataObj = new SEOPost();
+            $seoData = $modelMetaDataObj
+              ->where('belongsTo', $belongsTo)
+              ->whereIn('belongsToID', array_values($items))
+              ->get()
+              ->toArray();
+        }
+
+        // save in cache
+        Cache::forever($cacheName, $seoData);
+        return $seoData;
     }
 
     /**
@@ -472,7 +411,6 @@ class Plugin implements PluginInterface {
      */
     public function getPostData(string $belongsTo, int $belongsToID){
         // search in cache
-
         if(!Cache::has('seo_meta_data_'.$belongsTo)){
             $cacheData = $this->savePostDataInCache($belongsTo);
         }else{
@@ -488,7 +426,7 @@ class Plugin implements PluginInterface {
             // because we save them above, therefore, we don't even need
             // to make a query for that
             if(isPostType($belongsTo)){
-                $posts = Post::getFromCache($belongsTo)->pluck(['postID'])->toArray();
+                $posts = Post::cache($belongsTo)->getItems()->pluck(['postID'])->toArray();
                 if(in_array($belongsToID, $posts)){
                     return null;
                 }
