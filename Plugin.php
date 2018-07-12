@@ -531,4 +531,8 @@ class Plugin implements PluginInterface {
 
         return true;
     }
+
+    public function update(){
+        return true;
+    }
 }
