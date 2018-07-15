@@ -392,8 +392,7 @@ class Plugin implements PluginInterface {
             $seoData = $modelMetaDataObj
               ->where('belongsTo', $belongsTo)
               ->whereIn('belongsToID', array_values($items))
-              ->get()
-              ->toArray();
+              ->get();
         }
 
         // save in cache
@@ -420,7 +419,7 @@ class Plugin implements PluginInterface {
         // search in cache
         $modelMetaData = collect($cacheData)->where('belongsToID',$belongsToID)->first();
         if($modelMetaData){
-            return $this->fillCacheAttributes(SEOPost::class, [$modelMetaData])->first();
+            return $modelMetaData;
         }else{
             // post meta data of latest posts should have been in cache
             // because we save them above, therefore, we don't even need
