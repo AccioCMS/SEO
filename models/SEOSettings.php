@@ -77,7 +77,7 @@ class SEOSettings extends Model{
         $settings = [];
         $SEOSettings = self::cache();
         foreach($SEOSettings as $setting){
-            $settings[$setting->belongsTo][$setting->key] = $setting->value;
+            $settings[$setting['belongsTo']][$setting['key']] = $setting['value'];
         }
         return $settings;
     }

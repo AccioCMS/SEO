@@ -392,7 +392,8 @@ class Plugin implements PluginInterface {
             $seoData = $modelMetaDataObj
               ->where('belongsTo', $belongsTo)
               ->whereIn('belongsToID', array_values($items))
-              ->get();
+              ->get()
+                ->toArray();
         }
 
         // save in cache
