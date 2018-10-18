@@ -372,17 +372,17 @@ class Plugin implements PluginInterface {
         $items = [];
         switch ($belongsTo){
             case 'category':
-                $items = Category::cache($belongsTo)->getItems()->limit(2000)->pluck(['categoryID'])->toArray();
+                $items = Category::cache($belongsTo)->collect()->limit(2000)->pluck(['categoryID'])->toArray();
                 break;
 
             case 'tag':
-                $items = Tag::cache($belongsTo)->getItems()->limit(2000)->pluck(['tagID'])->toArray();
+                $items = Tag::cache($belongsTo)->collect()->limit(2000)->pluck(['tagID'])->toArray();
                 break;
 
             default:
                 $getPostType = getPostType($belongsTo);
                 if($getPostType){
-                    $items = Post::cache($belongsTo)->getItems()->pluck(['postID'])->toArray();
+                    $items = Post::cache($belongsTo)->collect()->pluck(['postID'])->toArray();
                 }
                 break;
         }
@@ -393,7 +393,7 @@ class Plugin implements PluginInterface {
               ->where('belongsTo', $belongsTo)
               ->whereIn('belongsToID', array_values($items))
               ->get()
-              ->toArray();
+                ->toArray();
         }
 
         // save in cache
@@ -420,13 +420,13 @@ class Plugin implements PluginInterface {
         // search in cache
         $modelMetaData = collect($cacheData)->where('belongsToID',$belongsToID)->first();
         if($modelMetaData){
-            return $this->fillCacheAttributes(SEOPost::class, [$modelMetaData])->first();
+            return $modelMetaData;
         }else{
             // post meta data of latest posts should have been in cache
             // because we save them above, therefore, we don't even need
             // to make a query for that
             if(isPostType($belongsTo)){
-                $posts = Post::cache($belongsTo)->getItems()->pluck(['postID'])->toArray();
+                $posts = Post::cache($belongsTo)->collect()->pluck(['postID'])->toArray();
                 if(in_array($belongsToID, $posts)){
                     return null;
                 }
@@ -529,6 +529,10 @@ class Plugin implements PluginInterface {
             });
         }
 
+        return true;
+    }
+
+    public function update(){
         return true;
     }
 }

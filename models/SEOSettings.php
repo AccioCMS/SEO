@@ -2,11 +2,15 @@
 
 namespace Plugins\Accio\SEO\Models;
 
+use Accio\App\Traits\CacheTrait;
+use Accio\App\Traits\CollectionTrait;
 use App\Models\Language;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class SEOSettings extends Model{
+    use CacheTrait, CollectionTrait;
+
     /**
      * @var string table name
      */
@@ -63,13 +67,14 @@ class SEOSettings extends Model{
     }
 
     /**
-     * Get all meta settings
+     * Get all meta settings.
      *
      * @return array
+     * @throws \Exception
      */
     public static function getAllSettings(){
         $settings = [];
-        $SEOSettings = self::all();
+        $SEOSettings = self::cache();
         foreach($SEOSettings as $setting){
             $settings[$setting['belongsTo']][$setting['key']] = $setting['value'];
         }
