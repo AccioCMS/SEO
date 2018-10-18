@@ -31,7 +31,7 @@
                     <div class="imagePrevContainer col-md-10 col-sm-10 col-xs-12">
                         <div class="imageSingleThumb" v-for="(file, count) in mediaSelectedFiles['plugin_accio_seo_facebook_image_'+activeLang]" :key="count">
                             <i class="fa fa-close closeBtnForPrevImages" @click="removeImage('plugin_accio_seo_facebook_image_')"></i>
-                            <img :src="generateUrl(constructUrl(file))">
+                            <img :src="constructMediaUrl(file)">
                         </div>
 
                         <div class="clearfix"></div>
@@ -70,7 +70,7 @@
                     <div class="imagePrevContainer col-md-10 col-sm-10 col-xs-12">
                         <div class="imageSingleThumb" v-for="(file, count) in mediaSelectedFiles['plugin_accio_seo_twitter_image_'+activeLang]" :key="count">
                             <i class="fa fa-close closeBtnForPrevImages" @click="removeImage('plugin_accio_seo_twitter_image_')"></i>
-                            <img :src="generateUrl(constructUrl(file))">
+                            <img :src="constructMediaUrl(file)">
                         </div>
 
                         <div class="clearfix"></div>

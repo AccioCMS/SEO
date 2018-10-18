@@ -2,7 +2,6 @@
 
 namespace Plugins\Accio\SEO\Models;
 
-
 use App\Models\Language;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;

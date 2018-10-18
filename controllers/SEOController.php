@@ -127,14 +127,18 @@ class SEOController extends MainPluginsController{
         }
 
         $media = [];
-        $facebookImage = Media::where('mediaID',$seoData->facebookMediaID)->get();
-        if($facebookImage && $facebookImage->count()){
-            $media['plugin_accio_seo_facebook_image_'.$lang] = Media::where('mediaID',$seoData->facebookMediaID)->get();
+        if($seoData->facebookMediaID){
+            $facebookImage = Media::where('mediaID',$seoData->facebookMediaID)->get();
+            if($facebookImage && $facebookImage->count()){
+                $media['plugin_accio_seo_facebook_image_'.$lang] = Media::where('mediaID',$seoData->facebookMediaID)->get();
+            }
         }
 
-        $twitterImage = Media::where('mediaID',$seoData->twitterMediaID)->get();
-        if($twitterImage && $twitterImage->count()){
-            $media['plugin_accio_seo_twitter_image_'.$lang] = Media::where('mediaID',$seoData->twitterMediaID)->get();
+        if ($seoData->twitterMediaID){
+            $twitterImage = Media::where('mediaID',$seoData->twitterMediaID)->get();
+            if($twitterImage && $twitterImage->count()){
+                $media['plugin_accio_seo_twitter_image_'.$lang] = Media::where('mediaID',$seoData->twitterMediaID)->get();
+            }
         }
 
         if($seoData){
