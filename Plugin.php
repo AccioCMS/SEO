@@ -156,11 +156,12 @@ class Plugin implements PluginInterface {
             if($model){
                 $this->model = $model;
                 $this
-                  ->setPostMetaData($this->model->getTable(), $this->model->getKey())
-                  ->setTitle()
-                  ->setDescription()
-                  ->setOpenGraph()
-                  ->setTwiterMeta();
+                    ->setPostMetaData($this->model->getTable(), $this->model->getKey())
+                    ->setTitle()
+                    ->setMeta()
+                    ->setDescription()
+                    ->setOpenGraph()
+                    ->setTwiterMeta();
             }
         });
 
@@ -179,6 +180,35 @@ class Plugin implements PluginInterface {
         }elseif($this->getSettings($this->model->getTable(), 'title')) {
             Meta::setTitle(Meta::replaceWildcards($this->getSettings($this->model->getTable(), 'title'),  $this->model->getTable()));
         }
+        return $this;
+    }
+
+    private function setMeta(){
+        $areAllowed = SEOSettings::cache()->getItems()->where("belongsTo", $this->model->getTable())->where("key", "robots")->first()->value;
+
+        if(!$areAllowed){
+            Meta::set("robots", "noindex, nofollow");
+        }else{
+            if(!$this->getPostMetaData('isIndex') && !$this->getPostMetaData('isFollow')){
+                Meta::set("robots", "noindex, nofollow");
+            }else{
+                $hasMeta = false;
+                if(!$this->getPostMetaData('isIndex')){
+                    $hasMeta = true;
+                    Meta::set("robots", "noindex");
+                }
+
+                if(!$this->getPostMetaData('isFollow')){
+                    $hasMeta = true;
+                    Meta::set("robots", "nofollow");
+                }
+
+                if(!$hasMeta){
+                    Meta::set("robots", "follow index");
+                }
+            }
+        }
+
         return $this;
     }
 
@@ -274,13 +304,16 @@ class Plugin implements PluginInterface {
      * @param $post
      */
     public function store($data, $post){
-        $seoData = $data['pluginsData']['Accio_SEO_post'];
+        $seoData = "";
+        if(isset($data['pluginsData'])){
+            $seoData = $data['pluginsData']['Accio_SEO_post'];
+        }
 
         if($seoData) {
             $tmp = $this->prepare($seoData);
 
             $seoPost = SEOPost::where('belongsToID', $post->postID)->where('belongsTo', $data['postType'])->first();
-            if (!$seoPost){
+            if(!$seoPost){
                 $seoPost = new SEOPost();
             }
 
@@ -301,11 +334,7 @@ class Plugin implements PluginInterface {
             if (!$seoPost->save()){
                 $post->noty("error", "SEO data not saved");
             }else{
-                // remove caches
-                Cache::forget('seo_meta_data_'.$post->getTable());
-
-                // create store task
-                Task::create('Accio_SEO_post','store', $post, ['postType' => $data['postType'], 'data' => $data]);
+                Cache::forget('seo_meta_data_'.$data['postType']);
             }
         }else{
             $post->noty("error", "SEO data not received! Please check SEO Plugin Panel");
@@ -390,9 +419,9 @@ class Plugin implements PluginInterface {
         if($items) {
             $modelMetaDataObj = new SEOPost();
             $seoData = $modelMetaDataObj
-              ->where('belongsTo', $belongsTo)
-              ->whereIn('belongsToID', array_values($items))
-              ->get()
+                ->where('belongsTo', $belongsTo)
+                ->whereIn('belongsToID', array_values($items))
+                ->get()
                 ->toArray();
         }
 
@@ -420,7 +449,10 @@ class Plugin implements PluginInterface {
         // search in cache
         $modelMetaData = collect($cacheData)->where('belongsToID',$belongsToID)->first();
         if($modelMetaData){
-            return $modelMetaData;
+            $modelMetaDataObj = new SEOPost();
+            $modelMetaDataObj->casts = [];
+            $modelMetaDataObj->setRawAttributes($modelMetaData);
+            return $modelMetaDataObj;
         }else{
             // post meta data of latest posts should have been in cache
             // because we save them above, therefore, we don't even need
@@ -436,9 +468,9 @@ class Plugin implements PluginInterface {
         // search in database
         $modelMetaDataObj = new SEOPost();
         $modelMetaData = $modelMetaDataObj
-          ->where('belongsTo', $belongsTo)
-          ->where('belongsToID', $belongsToID)
-          ->first();
+            ->where('belongsTo', $belongsTo)
+            ->where('belongsToID', $belongsToID)
+            ->first();
 
         return $modelMetaData;
     }
@@ -456,8 +488,8 @@ class Plugin implements PluginInterface {
         $this->modelMetaData = $this->getPostData($belongsTo,$belongsToID);
 
         if($this->modelMetaData){
-            $this->modelMetaData->facebookMedia = null;
-            $this->modelMetaData->twitterMedia = null;
+//            $this->modelMetaData->facebookMedia = null;
+//            $this->modelMetaData->twitterMedia = null;
 
             if($this->modelMetaData->facebookMediaID){
                 $this->modelMetaData->facebookMedia = Media::find($this->modelMetaData->facebookMediaID);
@@ -477,7 +509,7 @@ class Plugin implements PluginInterface {
      * @return string|null
      */
     public function getPostMetaData($key){
-        if($this->modelMetaData && $this->modelMetaData->$key){
+        if($this->modelMetaData && isset($this->modelMetaData->$key)){
             return $this->modelMetaData->$key;
         }
         return;

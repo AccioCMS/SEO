@@ -26,26 +26,6 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="control-label col-md-2 col-sm-2 col-xs-12">Exclude posts of {{ postType.name }}: </label>
-                    <div class="col-md-8 col-sm-8 col-xs-12">
-                        <multiselect
-                                v-model="postsIgnoredInSitemap[postType.slug]"
-                                :options="postOptions"
-                                :multiple="true"
-                                :close-on-select="true"
-                                :clear-on-select="false"
-                                :hide-selected="true"
-                                placeholder="Search with title"
-                                label="title"
-                                track-by="postID"
-                                :searchable="true"
-                                :loading="isLoading[postType.slug]"
-                                :disabled="isDisabled(postType.postTypeID)"
-                                @search-change="searchPost($event, postType.slug)"></multiselect>
-                    </div>
-                </div>
-
             </div>
 
         </form>
@@ -54,11 +34,8 @@
 </template>
 <style scoped>
     .postTypeContainer{
-        padding-top: 30px;
-        padding-bottom: 30px;
         margin-top: 30px;
         margin-bottom: 30px;
-        border: 1px solid #EAEAEA;
     }
     input[type="checkbox"]{
         width: 18px;
@@ -79,10 +56,10 @@
 </style>
 <script>
     export default{
-        created(){
+        mounted(){
             this.$http.get(this.basePath+'/'+this.$route.params.adminPrefix+'/'+this.$route.params.lang+'/json/post-type/get-all')
                 .then((resp) => {
-                    this.postTypesList = resp.body.list;
+                    this.postTypesList = resp.body.data;
                     for(let k in this.postTypesList){
                         this.isLoading[this.postTypesList[k].slug] = false;
                     }
@@ -107,6 +84,7 @@
                         tmp.push(this.postTypesList[k].postTypeID);
                     }
                 }
+                this.postTypesInSitemap = tmp;
                 this.$store.commit('setData', {state: 'postTypesInSitemap', value: tmp});
             },
 

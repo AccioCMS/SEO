@@ -32,11 +32,27 @@
 
             </div>
         </div>
+
+        <div class="alert alert-success">
+            <h5>Variables to use within fields</h5>
+            <p>{{ titlePlaceholder }} - Will be replaced with the category title</p>
+            <p>{{ sitenamePlaceholder }} - The site's name</p>
+            <p>{{ pagePlaceholder }} - Will be replaced with the current page number (i.e. page 2 of 4)</p>
+        </div>
+
     </form>
 </template>
 
 <script>
     export default {
+        data(){
+            return{
+                titlePlaceholder: '{{title}}',
+                sitenamePlaceholder: '{{sitename}}',
+                pagePlaceholder: '{{page}}',
+
+            }
+        },
         methods:{
             changeBoolean(key, value){
                 this.$store.commit('setData', {group: 'categories', state: key, value: value});

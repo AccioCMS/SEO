@@ -21,16 +21,14 @@ export const store = new Vuex.Store({
             },
 
             categories: {
-                postTypesInSitemap: [],
-                categoriesIgnoredInSitemap: {},
+                categoriesSitemap: true,
                 title: '',
                 description: '',
                 robots: false,
             },
 
             tags:{
-                postTypesInSitemap: [],
-                tagsIgnoredInSitemap: {},
+                tagsSitemap: true,
                 title: '',
                 description: '',
                 robots: false,
@@ -58,6 +56,9 @@ export const store = new Vuex.Store({
     getters: {
         get_post_types(state){
             return state.postTypeList;
+        },
+        get_data(state){
+            return state.data;
         }
     },
     mutations: {

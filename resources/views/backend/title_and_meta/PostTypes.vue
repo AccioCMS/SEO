@@ -36,14 +36,25 @@
             <hr>
         </template>
 
+        <div class="alert alert-success">
+            <h5>Variables to use within fields</h5>
+            <p>{{ titlePlaceholder }} - Will be replaced with the title of the post/page</p>
+            <p>{{ sitenamePlaceholder }} - The site's name</p>
+            <p>{{ pagePlaceholder }} - Will be replaced with the current page number (i.e. page 2 of 4)</p>
+        </div>
+
     </form>
 </template>
 
 <script>
     export default {
-        created(){
-            //this.isLoading = true;
+        data(){
+            return{
+                titlePlaceholder: '{{title}}',
+                sitenamePlaceholder: '{{sitename}}',
+                pagePlaceholder: '{{page}}',
 
+            }
         },
         methods:{
             dataChanged(event, postType, type){

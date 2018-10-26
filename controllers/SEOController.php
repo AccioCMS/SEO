@@ -5,6 +5,7 @@ namespace Plugins\Accio\SEO\Controllers;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use App\Http\Controllers\MainPluginsController;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Plugins\Accio\SEO\Models\SEOPost;
@@ -20,6 +21,7 @@ class SEOController extends MainPluginsController{
     public function store(Request $request){
         // truncate table
         $truncate = SEOSettings::truncate();
+        SEOSettings::removeCache();
 
         if($truncate){
             $tmp = [];

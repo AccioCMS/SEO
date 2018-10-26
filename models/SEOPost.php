@@ -18,7 +18,7 @@ class SEOPost extends Model{
      */
     protected $primaryKey = "postDataID";
 
-    protected $casts = [
+    public $casts = [
         'title' => 'object',
         'description' => 'object',
         'facebookTitle' => 'object',

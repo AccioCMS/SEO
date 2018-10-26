@@ -44,17 +44,11 @@ class SEOSettings extends Model{
      * @return array|mixed
      */
     public static function getObjectsFromIDs($key, $value){
-        if(env("DB_ARCHIVE")){
-            $DB = DB::connection("mysql_archive");
-        }else{
-            $DB = DB::connection("mysql");
-        }
-
         if(count(get_object_vars($value))){
             $tmp = [];
             foreach ($value as $objKey => $object){
                 if($key == 'postsIgnoredInSitemap'){
-                    $tmp[$objKey] = Language::filterRows($DB->table($objKey)->whereIn("postID", $object)->get(), false);
+                    $tmp[$objKey] = Language::filterRows(DB::table($objKey)->whereIn("postID", $object)->get(), false);
                 }elseif($key == 'categoriesIgnoredInSitemap'){
                     $tmp[$objKey] = Language::filterRows(DB::table("categories")->whereIn("categoryID", $object)->get(), false);
                 }elseif($key == 'tagsIgnoredInSitemap'){
