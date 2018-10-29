@@ -8,16 +8,13 @@ use App\Models\Media;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Models\Task;
-use Facebook\GraphNodes\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Schema;
 use Accio\App\Interfaces\PluginInterface;
 use Accio\App\Traits\PluginTrait;
 use Accio\Support\Facades\Meta;
-use Mockery\Exception;
 use Plugins\Accio\SEO\Models\SEOPost;
 use Plugins\Accio\SEO\Models\SEOSettings;
 use Symfony\Component\Console\Command\Command;
@@ -43,10 +40,14 @@ class Plugin implements PluginInterface {
      */
     private $model;
 
+    public function __construct(){
+
+    }
+
     /**
      * Register method, called when the plugin is first registered.
      *
-     * @return void
+     * @throws \Exception
      */
     public function register(){
         $this->settings = SEOSettings::getAllSettings();
@@ -56,12 +57,6 @@ class Plugin implements PluginInterface {
         // Saved Event
         Event::listen('post:stored', function ($data, $model) {
             $this->store($data, $model);
-        });
-
-        // Archiving event (when post does'nt exist in the main database)
-        Event::listen('post:updated:archiving', function ($data, $post) {
-            // create store task
-            Task::create('Accio_SEO_post', 'store', $post, ['data' => $data]);
         });
 
         // When posts are deleted, delete seo data too
@@ -91,6 +86,7 @@ class Plugin implements PluginInterface {
     }
     /**
      * Redirect urls as defined in Plugin page
+     *
      * @return $this
      */
     private function redirectManager(){
@@ -110,7 +106,6 @@ class Plugin implements PluginInterface {
                         Header("Location: ".$toUrl, true, 301);
                         exit;
                     }else{ //try regex
-
                         if($fromUrl = $this->makeRegexURL($fromUrl)) {
                             if (preg_match($fromUrl, $currentURL)) {
 
@@ -229,6 +224,7 @@ class Plugin implements PluginInterface {
 
     /**
      * Set twitter meta data
+     *
      * @return $this
      */
     private function setTwiterMeta(){
