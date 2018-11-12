@@ -52,18 +52,41 @@ export const store = new Vuex.Store({
         },
 
         postTypesList: [],
+
+        menuLinkList: [],
+
+        languagesList: [],
+
+        defaultLangSlug: "",
+
     },
     getters: {
         get_post_types(state){
             return state.postTypeList;
         },
+        get_menu_links(state){
+            return state.menuLinkList;
+        },
         get_data(state){
             return state.data;
+        },
+        get_local_languages(state){
+            return state.languagesList;
+        },
+        get_default_lang_slug(state){
+            return state.defaultLangSlug;
         }
     },
     mutations: {
+        setAllData(state, obj){
+            state.data = obj;
+        },
         setData(state, obj){
-            state.data[obj.group][obj.state] = obj.value;
+            if(obj.lang !== undefined){
+                state.data[obj.group][obj.state][obj.lang] = obj.value;
+            }else{
+                state.data[obj.group][obj.state] = obj.value;
+            }
         },
         addGroup(state, obj){
             state.data[obj.group] = obj.value;
@@ -73,7 +96,16 @@ export const store = new Vuex.Store({
         },
         setPostTypeData(state, obj){
             state.data[obj.postType][obj.type] = obj.value;
-        }
+        },
+        setMenuLinkList(state, menuLinkList){
+            state.menuLinkList = menuLinkList;
+        },
+        setLanguagesList(state, languagesList){
+            state.languagesList = languagesList;
+        },
+        setDefaultLangSlug(state, defaultLangSlug){
+            state.defaultLangSlug = defaultLangSlug;
+        },
 
     }
 });

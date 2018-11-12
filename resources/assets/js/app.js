@@ -22,6 +22,7 @@ import PostTypesMeta from '../../views/backend/title_and_meta/PostTypes.vue';
 import CategoryMeta from '../../views/backend/title_and_meta/Category.vue';
 import TagMeta from '../../views/backend/title_and_meta/Tag.vue';
 import AuthorMeta from '../../views/backend/title_and_meta/Author.vue';
+import MenuLinks from '../../views/backend/title_and_meta/MenuLinks.vue';
 
 Vue.use(VueRouter);
 
@@ -32,6 +33,7 @@ const routes = [
                 { path: 'category-meta', component: CategoryMeta, name: 'category-meta' },
                 { path: 'tag-meta', component: TagMeta, name: 'tag-meta' },
                 { path: 'author-meta', component: AuthorMeta, name: 'author-meta' },
+                { path: 'menu-link', component: MenuLinks, name: 'menu-links-meta' },
             ]},
         { path: 'xml-sitemap', component: XMLSitemap, children: [
                 { path: '', component: General, name: 'general' },

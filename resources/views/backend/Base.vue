@@ -78,26 +78,19 @@
             const allDataPromise = this.$http.get(this.basePath+'/'+this.$route.params.adminPrefix+'/'+this.$route.params.lang+'/plugins/accio/seo/get-all')
                 .then((resp) => {
                     if(Object.keys(resp.body).length){
-                        this.$store.state.data = resp.body;
+                        this.$store.commit('setAllData', resp.body.data);
+                        this.$store.commit('setPostTypeList', resp.body.postTypes);
+                        this.$store.commit('setMenuLinkList', resp.body.menuLinks);
+                        this.$store.commit('setLanguagesList', resp.body.languages);
+                        this.$store.commit('setDefaultLangSlug', resp.body.defaultLangSlug);
                     }
                 }, error => {
                     this.noty("error", error);
                 });
 
-            // get post types
-            const postTypesPromise = this.$http.get(this.basePath+'/'+this.$route.params.adminPrefix+'/'+this.$route.params.lang+'/json/post-type/get-all')
-                .then((resp) => {
-                    this.postTypesList = resp.body.data;
-                    for (let k in this.postTypesList){
-                        if(this.$store.state.data[this.postTypesList[k].slug] === undefined){
-                            this.$store.commit('addGroup', {group: this.postTypesList[k].slug, value: { title: '', description: '', robots: '' }});
-                        }
-                    }
-                    this.$store.commit('setPostTypeList', this.postTypesList);
-                });
 
             // when all ajax request are done
-            Promise.all([allDataPromise, postTypesPromise]).then(([p1,p2]) => {
+            Promise.all([allDataPromise]).then(([p1]) => {
                 this.spinner = false;
             });
         },

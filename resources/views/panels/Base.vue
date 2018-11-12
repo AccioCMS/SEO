@@ -17,6 +17,7 @@
 
     </div>
 </template>
+
 <style scoped>
     .seoPanelWrapper{
         margin-top:30px;

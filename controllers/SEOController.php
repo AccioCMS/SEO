@@ -2,7 +2,10 @@
 
 namespace Plugins\Accio\SEO\Controllers;
 
+use App\Models\Language;
 use App\Models\Media;
+use App\Models\MenuLink;
+use App\Models\PostType;
 use Illuminate\Http\Request;
 use App\Http\Controllers\MainPluginsController;
 use Illuminate\Support\Facades\Cache;
@@ -80,6 +83,12 @@ class SEOController extends MainPluginsController{
      */
     public function getAll(){
         $data = SEOSettings::all();
+        $languages = Language::cache()->getItems();
+        $defaultLangSlug = Language::getDefault()->slug;
+
+        $postTypes = PostType::cache()->getItems();
+        $postTypeSlugs = array_keys($postTypes->keyBy("slug")->toArray());
+
         $result = [];
         foreach ($data as $row){
             if(!isset($result[$row->belongsTo])){
@@ -100,7 +109,74 @@ class SEOController extends MainPluginsController{
 
             $result[$row->belongsTo][$row->key] = $value;
         }
-        return $result;
+
+        // create arrays for new post type
+        foreach($postTypeSlugs as $postTypeSlug){
+            if (!array_key_exists($postTypeSlug, $result)){
+                $result[$postTypeSlug] = [
+                    "title" => null,
+                    "description" => null,
+                    "robots" => 1,
+                ];
+            }
+        }
+
+        $menuLinksTmp = MenuLink::cache()->getItems();
+        $menuLinks = [];
+        foreach($menuLinksTmp as $key => $menuLink){
+            $menuLinkKey = "menu_link_".$menuLink->menuLinkID;
+            if (!array_key_exists($menuLinkKey, $result)){
+                $result[$menuLinkKey] = [
+                    "title" => null,
+                    "description" => null,
+                    "robots" => 1,
+                ];
+            }
+            $menuLinks[$key] = $menuLink->toArray();
+            $menuLinks[$key]["label"] = $menuLink->label;
+            $menuLinks[$key]["settingsKey"] = $menuLinkKey;
+        }
+
+        $tmp = [];
+        $translatableKeys = ["title", "description", "robots"];
+        foreach ($result as $key => $item){
+            $tmp[$key] = [];
+
+            foreach ($item as $itemKey => $itemValue){
+                $val = (in_array($itemKey, $translatableKeys)) ? $this->makeValueForEachLang($languages, $itemValue) : $itemValue;
+                $tmp[$key][$itemKey] = $val;
+            }
+        }
+        $result = $tmp;
+
+        return [
+            "data" => $result,
+            "postTypes" => $postTypes,
+            "menuLinks" => $menuLinks,
+            "languages" => $languages,
+            "defaultLangSlug" => $defaultLangSlug,
+        ];
+    }
+
+    /**
+     * Make a value in the data array for each languages using language slug as key for the data array
+     *
+     * @param object $languages
+     * @param array $data
+     * @return array
+     */
+    private function makeValueForEachLang($languages, $data){
+        if(!$data){
+            $data = [];
+        }
+
+        foreach ($languages as $lang){
+            if(!in_array($lang->slug, $data)){
+                $data[$lang->slug] = "";
+            }
+        }
+
+        return $data;
     }
 
     /**

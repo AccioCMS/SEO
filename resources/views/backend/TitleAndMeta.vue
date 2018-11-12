@@ -9,6 +9,7 @@
                         <li :class="{active: $route.name == 'category-meta'}"><router-link :to="{name: 'category-meta'}" tag="a">Category</router-link></li>
                         <li :class="{active: $route.name == 'tag-meta'}"><router-link :to="{name: 'tag-meta'}" tag="a">Tag</router-link></li>
                         <li :class="{active: $route.name == 'author-meta'}"><router-link :to="{name: 'author-meta'}" tag="a">Author</router-link></li>
+                        <li :class="{active: $route.name == 'menu-links-meta'}"><router-link :to="{name: 'menu-links-meta'}" tag="a">Menu Links</router-link></li>
                     </ul>
 
                     <!-- TAB CONTENT -->

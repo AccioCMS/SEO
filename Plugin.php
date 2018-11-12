@@ -8,6 +8,7 @@ use App\Models\Media;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Models\Task;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Redirect;
@@ -114,7 +115,7 @@ class Plugin implements PluginInterface {
 
                                 if(count($patternMatches) && count($replacementMatches)) {
                                     $paramsMatched = true;
-                                    foreach ($replacementMatches[0] as $match) {
+                                    foreach($replacementMatches[0] as $match){
                                         $removeSign = str_replace('$', '', $match);
                                         // match & replace patterns
                                         if (isset($patternMatches[$removeSign]) && isset($patternMatches[$removeSign][0])) {
@@ -174,34 +175,49 @@ class Plugin implements PluginInterface {
             Meta::setTitle($this->getPostMetaData('title'));
         }elseif($this->getSettings($this->model->getTable(), 'title')) {
             Meta::setTitle(Meta::replaceWildcards($this->getSettings($this->model->getTable(), 'title'),  $this->model->getTable()));
+        }elseif($this->model->getTable() == "menu_links"){
+            $title = $this->getSettings("menu_link_".$this->model->menuLinkID, 'title');
+            if($title){
+                Meta::setTitle(Meta::replaceWildcards($title,  $this->model->getTable()));
+            }
         }
         return $this;
     }
 
     private function setMeta(){
-        $areAllowed = SEOSettings::cache()->getItems()->where("belongsTo", $this->model->getTable())->where("key", "robots")->first()->value;
+        $belongsTo = $this->model->getTable();
+        if($this->model->getTable() == "menu_links"){
+            $belongsTo = "menu_link_".$this->model->menuLinkID;
+        }
+
+        $areAllowed = SEOSettings::cache()->getItems()->where("belongsTo", $belongsTo)->where("key", "robots")->first();
 
         if(!$areAllowed){
             Meta::set("robots", "noindex, nofollow");
         }else{
-            if(!$this->getPostMetaData('isIndex') && !$this->getPostMetaData('isFollow')){
-                Meta::set("robots", "noindex, nofollow");
+            if($this->model->getTable() == "menu_links"){
+                Meta::set("robots", "follow index");
             }else{
-                $hasMeta = false;
-                if(!$this->getPostMetaData('isIndex')){
-                    $hasMeta = true;
-                    Meta::set("robots", "noindex");
-                }
+                if(!$this->getPostMetaData('isIndex') && !$this->getPostMetaData('isFollow')){
+                    Meta::set("robots", "noindex, nofollow");
+                }else{
+                    $hasMeta = false;
+                    if(!$this->getPostMetaData('isIndex')){
+                        $hasMeta = true;
+                        Meta::set("robots", "noindex");
+                    }
 
-                if(!$this->getPostMetaData('isFollow')){
-                    $hasMeta = true;
-                    Meta::set("robots", "nofollow");
-                }
+                    if(!$this->getPostMetaData('isFollow')){
+                        $hasMeta = true;
+                        Meta::set("robots", "nofollow");
+                    }
 
-                if(!$hasMeta){
-                    Meta::set("robots", "follow index");
+                    if(!$hasMeta){
+                        Meta::set("robots", "follow index");
+                    }
                 }
             }
+
         }
 
         return $this;
@@ -217,6 +233,11 @@ class Plugin implements PluginInterface {
             Meta::set("description", $this->getPostMetaData('description'));
         }elseif($this->getSettings($this->model->getTable(),'description')) {
             Meta::set("description", Meta::replaceWildcards($this->getSettings($this->model->getTable(), 'description'), $this->model->getTable()));
+        }elseif($this->model->getTable() == "menu_links"){
+            $description = $this->getSettings("menu_link_".$this->model->menuLinkID, 'description');
+            if($description){
+                Meta::set("description", Meta::replaceWildcards($description,  $this->model->getTable()));
+            }
         }
         return $this;
     }
@@ -484,8 +505,6 @@ class Plugin implements PluginInterface {
         $this->modelMetaData = $this->getPostData($belongsTo,$belongsToID);
 
         if($this->modelMetaData){
-//            $this->modelMetaData->facebookMedia = null;
-//            $this->modelMetaData->twitterMedia = null;
 
             if($this->modelMetaData->facebookMediaID){
                 $this->modelMetaData->facebookMedia = Media::find($this->modelMetaData->facebookMediaID);
@@ -501,14 +520,25 @@ class Plugin implements PluginInterface {
 
     /**
      * Get post meta data
+     *
      * @param $key
      * @return string|null
      */
     public function getPostMetaData($key){
         if($this->modelMetaData && isset($this->modelMetaData->$key)){
-            return $this->modelMetaData->$key;
+            $data = $this->modelMetaData->$key;
+            $tmp = json_decode($data);
+            $lang = App::getLocale();
+
+            if(is_object($tmp)){
+                if(property_exists($tmp, $lang)){
+                    return $tmp->$lang;
+                }
+            }else{
+                return $data;
+            }
         }
-        return;
+        return null;
     }
 
 
@@ -521,7 +551,21 @@ class Plugin implements PluginInterface {
      * @return string|null
      */
     private function getSettings($belongsTo, $key){
-        return (isset($this->settings[$belongsTo][$key]) ? $this->settings[$belongsTo][$key] : null);
+        if(isset($this->settings[$belongsTo][$key])){
+            $data = $this->settings[$belongsTo][$key];
+            $tmp = json_decode($data);
+            $lang = App::getLocale();
+
+            if(is_object($tmp)){
+                if(property_exists($tmp, $lang)){
+                    return $tmp->$lang;
+                }
+            }else{
+                return $data;
+            }
+        }
+
+        return null;
     }
 
     /**
