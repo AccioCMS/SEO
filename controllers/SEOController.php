@@ -169,6 +169,7 @@ class SEOController extends MainPluginsController{
         if(!$data){
             $data = [];
         }
+        $data = (array) $data;
 
         foreach ($languages as $lang){
             if(!in_array($lang->slug, $data)){

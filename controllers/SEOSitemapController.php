@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Plugins\Accio\SEO\Models\SEOSettings;
 
@@ -63,6 +64,11 @@ class SEOSitemapController extends Controller {
             $appList[] = 'tags';
         }
 
+        $appListEventData = Event::fire('seo:sitemap-index:app-list', [$appList]);
+        if($appListEventData){
+            $appList = array_collapse($appListEventData);
+        }
+
         // construct array with xml data (data to be displayed in xml)
         $xmlData = [];
         foreach ($appList as $app){
@@ -90,6 +96,12 @@ class SEOSitemapController extends Controller {
             ];
         }
 
+        $xmlEventData = Event::fire('seo:sitemap-index:data', [$xmlData, $this->paginateNR]);
+
+        if($xmlEventData){
+            $xmlData = array_collapse($xmlEventData);
+        }
+
         return response()->view('sitemap', [
             'xmlData' => $xmlData,
             "styleUrl" => URL::asset('public/css/sitemap/main-sitemap.xsl')
@@ -104,12 +116,12 @@ class SEOSitemapController extends Controller {
      * @return \Illuminate\Http\Response
      */
     public function single($slug, $page){
+        $data = [];
         if($slug == "categories"){
             $data = Category::orderBy('updated_at', 'desc')->paginate($this->paginateNR, ['*'], 'page', $page);
         }elseif ($slug == "tags"){
             $data = Tag::orderBy('updated_at', 'desc')->paginate($this->paginateNR, ['*'], 'page', $page);
         }elseif ($slug == "authors"){
-
             $data = [];
             $users = User::all();
             foreach ($users as $author){
@@ -117,11 +129,23 @@ class SEOSitemapController extends Controller {
                     $data[] = $author;
                 }
             }
-
         }else{
-            $data = (new Post())->setTable($slug)
-                ->where('published_at', '<=', date('Y-m-d H:i:s'))
-                ->orderBy('updated_at', 'desc')->paginate($this->paginateNR, ['*'], 'page', $page);
+            if(starts_with($slug, "post_")){
+                $data = (new Post())->setTable($slug)
+                    ->where('published_at', '<=', date('Y-m-d H:i:s'))
+                    ->orderBy('updated_at', 'desc')->paginate($this->paginateNR, ['*'], 'page', $page);
+            }else{
+                $eventData = Event::fire('seo:sitemap-single:data', [$slug, $page, $this->paginateNR]);
+                if($eventData){
+                    $data = array_collapse($eventData);
+                }
+            }
+        }
+
+
+        $eventData = Event::fire('seo:sitemap-single:after-created', [$data, $slug, $page, $this->paginateNR]);
+        if($eventData){
+            $data = array_collapse($eventData);
         }
 
         $xmlData = [];
