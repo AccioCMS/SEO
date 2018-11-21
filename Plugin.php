@@ -190,7 +190,7 @@ class Plugin implements PluginInterface {
             $belongsTo = "menu_link_".$this->model->menuLinkID;
         }
 
-        $areAllowed = SEOSettings::cache()->getItems()->where("belongsTo", $belongsTo)->where("key", "robots")->first();
+        $areAllowed = SEOSettings::all()->where("belongsTo", $belongsTo)->where("key", "robots")->first();
 
         if(!$areAllowed){
             Meta::set("robots", "noindex, nofollow");
@@ -411,24 +411,24 @@ class Plugin implements PluginInterface {
      * @return $this
      * @throws \Exception
      */
-    private function savePostDataInCache(string $belongsTo){
+    private function savePostDataInCache(string $belongsTo, int $belongsToID){
         $cacheName = 'seo_meta_data_'.$belongsTo;
         $seoData = [];
 
         $items = [];
         switch ($belongsTo){
             case 'category':
-                $items = Category::cache($belongsTo)->getItems()->limit(2000)->pluck(['categoryID'])->toArray();
+                $items = Category::where("postTypeID", $belongsToID)->limit(2000)->get()->pluck(['categoryID'])->toArray();
                 break;
 
             case 'tag':
-                $items = Tag::cache($belongsTo)->getItems()->limit(2000)->pluck(['tagID'])->toArray();
+                $items = Tag::where("postTypeID", $belongsToID)->limit(2000)->get()->pluck(['tagID'])->toArray();
                 break;
 
             default:
                 $getPostType = getPostType($belongsTo);
                 if($getPostType){
-                    $items = Post::cache($belongsTo)->getItems()->pluck(['postID'])->toArray();
+                    $items = Post::where("postTypeID", $belongsToID)->limit(2000)->get()->pluck(['postID'])->toArray();
                 }
                 break;
         }
@@ -456,32 +456,6 @@ class Plugin implements PluginInterface {
      * @throws \Exception
      */
     public function getPostData(string $belongsTo, int $belongsToID){
-        // search in cache
-        if(!Cache::has('seo_meta_data_'.$belongsTo)){
-            $cacheData = $this->savePostDataInCache($belongsTo);
-        }else{
-            $cacheData = Cache::get('seo_meta_data_'.$belongsTo);
-        }
-
-        // search in cache
-        $modelMetaData = collect($cacheData)->where('belongsToID',$belongsToID)->first();
-        if($modelMetaData){
-            $modelMetaDataObj = new SEOPost();
-            $modelMetaDataObj->casts = [];
-            $modelMetaDataObj->setRawAttributes($modelMetaData);
-            return $modelMetaDataObj;
-        }else{
-            // post meta data of latest posts should have been in cache
-            // because we save them above, therefore, we don't even need
-            // to make a query for that
-            if(isPostType($belongsTo)){
-                $posts = Post::cache($belongsTo)->getItems()->pluck(['postID'])->toArray();
-                if(in_array($belongsToID, $posts)){
-                    return null;
-                }
-            }
-        }
-
         // search in database
         $modelMetaDataObj = new SEOPost();
         $modelMetaData = $modelMetaDataObj

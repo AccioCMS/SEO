@@ -5,11 +5,14 @@ namespace Plugins\Accio\SEO\Models;
 use Accio\App\Traits\CacheTrait;
 use Accio\App\Traits\CollectionTrait;
 use App\Models\Language;
+use GeneaLabs\LaravelModelCaching\Traits\Cachable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class SEOSettings extends Model{
-    use CacheTrait, CollectionTrait;
+    use
+        Cachable,
+        CollectionTrait;
 
     /**
      * @var string table name
@@ -68,7 +71,7 @@ class SEOSettings extends Model{
      */
     public static function getAllSettings(){
         $settings = [];
-        $SEOSettings = self::cache();
+        $SEOSettings = self::all();
         foreach($SEOSettings as $setting){
             $settings[$setting['belongsTo']][$setting['key']] = $setting['value'];
         }

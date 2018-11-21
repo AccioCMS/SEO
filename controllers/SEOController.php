@@ -8,7 +8,6 @@ use App\Models\MenuLink;
 use App\Models\PostType;
 use Illuminate\Http\Request;
 use App\Http\Controllers\MainPluginsController;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Plugins\Accio\SEO\Models\SEOPost;
@@ -18,13 +17,14 @@ class SEOController extends MainPluginsController{
 
 
     /**
+     * Store SEO settings in DB
+     *
      * @param Request $request data from frontend
      * @return array response data
      */
     public function store(Request $request){
         // truncate table
         $truncate = SEOSettings::truncate();
-        SEOSettings::removeCache();
 
         if($truncate){
             $tmp = [];
@@ -50,7 +50,7 @@ class SEOController extends MainPluginsController{
             }
 
             // insert data in DB
-            $seo = DB::table('accio_seo_settings')->insert($tmp);
+            $seo = SEOSettings::insert($tmp);
 
             // Write robots.txt file
             $writeRobots = $this->writeRobotsTXT($request->all()['robots']['content']);
@@ -66,6 +66,7 @@ class SEOController extends MainPluginsController{
 
     /**
      * Write robots.txt content
+     *
      * @param $content
      * @return bool
      */
@@ -83,10 +84,10 @@ class SEOController extends MainPluginsController{
      */
     public function getAll(){
         $data = SEOSettings::all();
-        $languages = Language::cache()->getItems();
+        $languages = Language::all();
         $defaultLangSlug = Language::getDefault()->slug;
 
-        $postTypes = PostType::cache()->getItems();
+        $postTypes = PostType::all();
         $postTypeSlugs = array_keys($postTypes->keyBy("slug")->toArray());
 
         $result = [];
@@ -96,17 +97,9 @@ class SEOController extends MainPluginsController{
             }
 
             $value = json_decode($row->value);
-            $objectKeys = ['postsIgnoredInSitemap','categoriesIgnoredInSitemap', 'tagsIgnoredInSitemap'];
-            if(is_object($value)){
-                if(in_array($row->key, $objectKeys)){
-                    $value = SEOSettings::getObjectsFromIDs($row->key, $value);
-                }
-            }else if(is_array($value) && in_array($row->key, $objectKeys) && !count($value)) {
-                $value = json_decode("{}");
-            }else if(!is_object($value) && !is_array($value)){
+            if(!is_object($value) && !is_array($value)){
                 $value = $row->value;
             }
-
             $result[$row->belongsTo][$row->key] = $value;
         }
 
@@ -121,7 +114,7 @@ class SEOController extends MainPluginsController{
             }
         }
 
-        $menuLinksTmp = MenuLink::cache()->getItems();
+        $menuLinksTmp = MenuLink::all();
         $menuLinks = [];
         foreach($menuLinksTmp as $key => $menuLink){
             $menuLinkKey = "menu_link_".$menuLink->menuLinkID;
@@ -170,9 +163,8 @@ class SEOController extends MainPluginsController{
             $data = [];
         }
         $data = (array) $data;
-
         foreach ($languages as $lang){
-            if(!in_array($lang->slug, $data)){
+            if(!array_has($data, $lang->slug)){
                 $data[$lang->slug] = "";
             }
         }
@@ -193,13 +185,6 @@ class SEOController extends MainPluginsController{
         ];
 
         $seoData = SEOPost::where('belongsToID', $postID)->where('belongsTo', $postType)->first();
-
-        // or query it on archive
-        if(!$seoData && env("DB_ARCHIVE")){
-            $seoObj = new SEOPost();
-            $seoObj->setConnection('mysql_archive');
-            $seoData = $seoObj->where('belongsToID', $postID)->where('belongsTo', $postType)->first();
-        }
 
         if(!$seoData){
             return $response;

@@ -3,11 +3,13 @@
 namespace Plugins\Accio\SEO\Models;
 
 
+use GeneaLabs\LaravelModelCaching\Traits\Cachable;
 use Illuminate\Database\Eloquent\Model;
 use Accio\App\Traits\TranslatableTrait;
 
 class SEOPost extends Model{
-    use TranslatableTrait;
+    use Cachable,
+        TranslatableTrait;
     /**
      * @var string table name
      */
