@@ -2,16 +2,10 @@
 
 namespace Plugins\Accio\SEO;
 
-use Accio\App\Traits\CacheTrait;
-use App\Models\Category;
 use App\Models\Media;
-use App\Models\Post;
-use App\Models\Tag;
 use App\Models\Task;
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Schema;
 use Accio\App\Interfaces\PluginInterface;
 use Accio\App\Traits\PluginTrait;
@@ -21,7 +15,7 @@ use Plugins\Accio\SEO\Models\SEOSettings;
 use Symfony\Component\Console\Command\Command;
 
 class Plugin implements PluginInterface {
-    use PluginTrait, CacheTrait;
+    use PluginTrait;
 
     /**
      * Saves post data
@@ -350,8 +344,6 @@ class Plugin implements PluginInterface {
 
             if (!$seoPost->save()){
                 $post->noty("error", "SEO data not saved");
-            }else{
-                Cache::forget('seo_meta_data_'.$data['postType']);
             }
         }else{
             $post->noty("error", "SEO data not received! Please check SEO Plugin Panel");
@@ -401,50 +393,6 @@ class Plugin implements PluginInterface {
      * @return void
      */
     public function boot(){
-    }
-
-
-    /**
-     * Save post data in cache
-     *
-     * @param string $belongsTo
-     * @return $this
-     * @throws \Exception
-     */
-    private function savePostDataInCache(string $belongsTo, int $belongsToID){
-        $cacheName = 'seo_meta_data_'.$belongsTo;
-        $seoData = [];
-
-        $items = [];
-        switch ($belongsTo){
-            case 'category':
-                $items = Category::where("postTypeID", $belongsToID)->limit(2000)->get()->pluck(['categoryID'])->toArray();
-                break;
-
-            case 'tag':
-                $items = Tag::where("postTypeID", $belongsToID)->limit(2000)->get()->pluck(['tagID'])->toArray();
-                break;
-
-            default:
-                $getPostType = getPostType($belongsTo);
-                if($getPostType){
-                    $items = Post::where("postTypeID", $belongsToID)->limit(2000)->get()->pluck(['postID'])->toArray();
-                }
-                break;
-        }
-
-        if($items) {
-            $modelMetaDataObj = new SEOPost();
-            $seoData = $modelMetaDataObj
-                ->where('belongsTo', $belongsTo)
-                ->whereIn('belongsToID', array_values($items))
-                ->get()
-                ->toArray();
-        }
-
-        // save in cache
-        Cache::forever($cacheName, $seoData);
-        return $seoData;
     }
 
     /**

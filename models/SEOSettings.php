@@ -2,7 +2,6 @@
 
 namespace Plugins\Accio\SEO\Models;
 
-use Accio\App\Traits\CacheTrait;
 use Accio\App\Traits\CollectionTrait;
 use App\Models\Language;
 use GeneaLabs\LaravelModelCaching\Traits\Cachable;
