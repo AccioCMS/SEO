@@ -2,6 +2,7 @@
 
 namespace Plugins\Accio\SEO\Models;
 
+use Accio\App\Traits\CollectionTrait;
 use App\Models\Language;
 use GeneaLabs\LaravelModelCaching\Traits\Cachable;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 class SEOSettings extends Model{
     use
-        Cachable;
+        Cachable,
+        CollectionTrait;
 
     /**
      * @var string table name
