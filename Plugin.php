@@ -35,6 +35,12 @@ class Plugin implements PluginInterface {
      */
     private $model;
 
+    /**
+     * Custom data from the add event
+     * @var
+     */
+    private $customSEOData;
+
     public function __construct(){
 
     }
@@ -142,9 +148,10 @@ class Plugin implements PluginInterface {
      */
     private function setMetaTags(){
         // Saved Event
-        Event::listen('meta:add', function($model = null){
+        Event::listen('meta:add', function($model = null, $customSEOData = []){
             if($model){
                 $this->model = $model;
+                $this->customSEOData = $customSEOData;
                 $this
                     ->setPostMetaData($this->model->getTable(), $this->model->getKey())
                     ->setTitle()
@@ -182,6 +189,11 @@ class Plugin implements PluginInterface {
         $belongsTo = $this->model->getTable();
         if($this->model->getTable() == "menu_links"){
             $belongsTo = "menu_link_".$this->model->menuLinkID;
+        }
+
+        if (isset($this->customSEOData['robots'])) {
+            Meta::set("robots", $this->customSEOData['robots']);
+            return $this;
         }
 
         $areAllowed = SEOSettings::all()->where("belongsTo", $belongsTo)->where("key", "robots")->first();
